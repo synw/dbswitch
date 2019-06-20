@@ -11,13 +11,13 @@ class _DbSwitcherPageState extends State<DbSwitcherPage> {
   _DbSwitcherPageState(
       {@required this.dbSwitcher,
       this.import = false,
-      @required this.exportPath})
+      @required this.storagePath})
       : assert(dbSwitcher != null),
-        assert(exportPath != null);
+        assert(storagePath != null);
 
   final DbSwitcher dbSwitcher;
   final bool import;
-  final String exportPath;
+  final String storagePath;
 
   SelectBloc _bloc;
 
@@ -51,20 +51,20 @@ class _DbSwitcherPageState extends State<DbSwitcherPage> {
               bloc: _bloc,
               trailingBuilder: (context, item) {
                 int id = int.parse("${item["id"]}");
-                Widget buttons = (exportPath == null)
+                Widget buttons = (storagePath == null)
                     ? _TrailingButton(
                         dbSwitcher: dbSwitcher, id: id, item: item)
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           IconButton(
-                              icon: const Icon(Icons.save),
+                              icon: const Icon(Icons.file_upload),
                               onPressed: () => confirmExportDb(
                                   context: context,
                                   id: id,
                                   name: "${item["name"]}",
                                   dbSwitcher: dbSwitcher,
-                                  destinationPath: exportPath)),
+                                  destinationPath: storagePath)),
                           _TrailingButton(
                               dbSwitcher: dbSwitcher, id: id, item: item)
                         ],
@@ -76,9 +76,21 @@ class _DbSwitcherPageState extends State<DbSwitcherPage> {
                 right: 15.0,
                 bottom: 15.0,
                 child: FloatingActionButton(
-                  child: const Icon(Icons.add),
+                  heroTag: "addProject",
+                  child: const Icon(Icons.add, color: Colors.yellow),
                   onPressed: () => addProjectDialog(context, dbSwitcher),
                 )),
+            Positioned(
+                right: 15.0,
+                bottom: 85.0,
+                child: FloatingActionButton(
+                    heroTag: "importProject",
+                    child:
+                        const Icon(Icons.file_download, color: Colors.blueGrey),
+                    onPressed: () => importProjectDialog(
+                        context: context,
+                        dbSwitcher: dbSwitcher,
+                        sourcePath: "$storagePath"))),
           ],
         ));
   }
@@ -116,7 +128,7 @@ class DbSwitcherPage extends StatefulWidget {
   DbSwitcherPage(
       {@required this.dbSwitcher,
       this.import = false,
-      @required this.exportPath});
+      @required this.storagePath});
 
   /// The main switcher instance
   final DbSwitcher dbSwitcher;
@@ -125,9 +137,9 @@ class DbSwitcherPage extends StatefulWidget {
   final bool import;
 
   /// Use the export database feature
-  final String exportPath;
+  final String storagePath;
 
   @override
   _DbSwitcherPageState createState() => _DbSwitcherPageState(
-      dbSwitcher: dbSwitcher, import: import, exportPath: exportPath);
+      dbSwitcher: dbSwitcher, import: import, storagePath: storagePath);
 }

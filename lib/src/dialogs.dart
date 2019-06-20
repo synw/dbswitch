@@ -34,6 +34,40 @@ void confirmExportDb(
       });
 }
 
+/// Import a database from storage
+void importProjectDialog(
+    {BuildContext context, DbSwitcher dbSwitcher, String sourcePath}) {
+  final controller = TextEditingController();
+  showDialog<void>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text("Name"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+        ),
+        actions: <Widget>[
+          FlatButton(
+            child: const Text("Cancel"),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+          FlatButton(
+            child: const Text("Import"),
+            onPressed: () {
+              dbSwitcher.importDb(
+                  name: "${controller.text}", sourcePath: sourcePath);
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 /// A dialog to add a new database
 void addProjectDialog(BuildContext context, DbSwitcher dbSwitcher) {
   final controller = TextEditingController();

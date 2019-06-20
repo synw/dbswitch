@@ -20,12 +20,11 @@ dependencies:
   flutter:
     sdk: flutter
   slugify2: ^0.2.1
-  path_provider: ^0.4.1
+  path_provider: ^1.1.0
   scoped_model: ^1.0.1
-  sqlcool: 
+  sqlcool:
     path: ../sqlcool
-  err: 
-    path: ../err
+  err: ^0.7.3
   sqlview:
     path: ../sqlview
 

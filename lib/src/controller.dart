@@ -8,10 +8,16 @@ import 'models.dart';
 import 'state.dart';
 
 /// Callback to run after exporting a database
-typedef Future<void> DataTransferCallback(
+typedef Future<void> AfterExportCallback(
     {@required String slug,
     @required String dbPath,
     @required String destinationPath});
+
+/// Callback to run after impoting a database
+typedef Future<void> AfterImportCallback(
+    {@required String slug,
+    @required String dbPath,
+    @required String sourcePath});
 
 Slugify _slugify = Slugify();
 
@@ -21,35 +27,40 @@ class DbSwitcher {
   DbSwitcher(
       {@required this.databasesPath,
       @required this.schema,
-      this.initQueries,
+      this.initQueries = const [],
       this.logger,
       this.afterExportCallback,
-      this.verbose})
+      this.afterImportCallback,
+      this.verbose = false})
       : assert(schema != null),
         assert(schema.isNotEmpty),
         assert(databasesPath != null) {
-    logger = logger ?? ErrRouter(infoRoute: [ErrRoute.screen]);
-    verbose = verbose ?? false;
-    initQueries = initQueries ?? [];
+    logger = logger ??
+        ErrRouter(
+            infoRoute: [ErrRoute.screen],
+            errorRoute: [ErrRoute.console, ErrRoute.screen]);
   }
 
   /// The database schema: create table queries
-  final List<String> schema;
+  final List<DbTable> schema;
 
   /// The queries to be executed at database creation time
-  List<String> initQueries;
+  final List<String> initQueries;
 
   /// The file path of the databases
   final String databasesPath;
 
   /// After export callback
-  DataTransferCallback afterExportCallback;
+  final AfterExportCallback afterExportCallback;
 
-  /// The err logger
+  /// After import callback
+  final AfterImportCallback afterImportCallback;
+
+  /// The error loggerger
   ErrRouter logger;
 
   /// Verbosity
-  bool verbose;
+  final bool verbose;
 
   final _switcherDb = Db();
   final _dbSwitchState = DbSwitchState();
@@ -118,7 +129,13 @@ class DbSwitcher {
       {@required String name, @required String sourcePath}) async {
     // Copy the file
     String slug = _slugify.slugify(name.trim());
-    var file = File("$sourcePath/$slug/geodb.sqlite");
+    String filePath = "$sourcePath/import/$slug/$slug.sqlite";
+    var file = File(filePath);
+    if (!file.existsSync()) {
+      String msg = "File $filePath does not exist";
+      logger.error(msg);
+      return;
+    }
     String destinationPath = _getDbPath(slug);
     try {
       file.copySync(destinationPath);
@@ -127,17 +144,17 @@ class DbSwitcher {
       throw (e);
     }
     // Save the new database reference
-    Map<String, String> row = {
-      "name": name,
-      "slug": slug,
-      "path": destinationPath
-    };
+    Map<String, String> row = {"name": name, "slug": slug};
     await _switcherDb
         .insert(table: "database", row: row)
         .catchError((dynamic e) {
       logger.error("Can not save the new database reference", err: e);
       throw (e);
     });
+    // Run the callback
+    if (afterImportCallback != null)
+      await afterImportCallback(
+          slug: slug, dbPath: file.path, sourcePath: sourcePath);
     logger.info("Database imported");
   }
 
@@ -215,12 +232,13 @@ class DbSwitcher {
     activeDb ??= await _getActiveDatabase();
     db ??= activeDb.db;
     List<String> queries = [];
-    queries.addAll(schema);
+    //for (var table in schema) queries.addAll(table.queries);
     queries.addAll(initQueries);
     await db
         .init(
             path: activeDb.path,
             absolutePath: true,
+            schema: schema,
             queries: queries,
             verbose: verbose)
         .catchError((dynamic e) {
@@ -280,7 +298,7 @@ class DbSwitcher {
          REFERENCES database(id)
          ON DELETE CASCADE
     )""";
-    String dbPath = "dbswitch1.sqlite";
+    String dbPath = "dbswitch.sqlite";
     String q3 = 'INSERT INTO database(id, name, slug, active) ' +
         'VALUES (1, "Default", "default", "true")';
     String q4 = 'INSERT INTO active_database(id, active_db_id) VALUES (1, 1)';
