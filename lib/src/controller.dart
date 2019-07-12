@@ -5,7 +5,6 @@ import 'package:sqlcool/sqlcool.dart';
 import 'package:err/err.dart';
 import 'package:slugify2/slugify.dart';
 import 'models.dart';
-import 'state.dart';
 
 /// Callback to run after exporting a database
 typedef Future<void> AfterExportCallback(
@@ -67,31 +66,27 @@ class DbSwitcher {
   final bool verbose;
 
   final _switcherDb = Db();
-  final _dbSwitchState = DbSwitchState();
   bool _initialized = false;
 
-  final _changeFeed = StreamController<ActiveDatabase>();
+  /// The current active database
+  ActiveDatabase activeDatabase;
+
+  final _changeFeed = StreamController<ActiveDatabase>.broadcast();
 
   /// The main switcher instance
   Db get switcherDb => _switcherDb;
 
-  /// The state of the database
-  DbSwitchState get state => _dbSwitchState;
-
-  /// Get the active database
-  ActiveDatabase get activeDb => _dbSwitchState.activeDb;
-
   /// The changefeed: a stream with databases switches changes
-  Stream<ActiveDatabase> get changeFeed => _changeFeed.stream;
+  Stream<ActiveDatabase> get changefeed => _changeFeed.stream;
 
   /// The initialization function: has to be run after [DbSwitcher]
   /// creation to be able to work with the package
   Future<void> init({@required Db db}) async {
     await _initSwitcherDb();
     await _switcherDb.onReady;
-    _dbSwitchState.activeDb = await _initActiveDb(db: db);
-    _changeFeed.sink.add(_dbSwitchState.activeDb);
-    _dbSwitchState.activeDb.db.onReady.then((_) {
+    activeDatabase = await _initActiveDb(db: db);
+    _changeFeed.sink.add(activeDatabase);
+    activeDatabase.db.onReady.then((_) {
       _initialized = true;
     });
   }
@@ -105,12 +100,12 @@ class DbSwitcher {
   Future<ActiveDatabase> switchDb(
       {@required String slug, @required int id}) async {
     // activate
-    var activeDb = await _switchDb(id: id, slug: slug);
+    var _activeDb = await _switchDb(id: id, slug: slug);
     // set state
-    _dbSwitchState.activeDb = activeDb;
+    activeDatabase = _activeDb;
     // emit the change
-    _changeFeed.sink.add(_dbSwitchState.activeDb);
-    return activeDb;
+    _changeFeed.sink.add(_activeDb);
+    return activeDatabase;
   }
 
   /// Add a database: will run the [schema] and [initQueries] queries
@@ -208,7 +203,7 @@ class DbSwitcher {
       {@required String slug, @required int id}) async {
     assert(_initialized);
     assert(_switcherDb != null);
-    Db oldDb = _dbSwitchState.activeDb.db;
+    Db oldDb = activeDatabase.db;
     String path = _getDbPath(slug);
     ActiveDatabase activeDb =
         ActiveDatabase(id: id, path: path, slug: slug, db: Db());

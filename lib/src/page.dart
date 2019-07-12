@@ -1,11 +1,11 @@
+import 'package:dbswitch/src/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:scoped_model/scoped_model.dart';
+import 'package:provider/provider.dart';
 import 'package:sqlcool/sqlcool.dart';
 import 'package:sqlview/sqlview.dart';
 import 'controller.dart';
 import 'dialogs.dart';
-import 'state.dart';
 
 class _DbSwitcherPageState extends State<DbSwitcherPage> {
   _DbSwitcherPageState(
@@ -43,8 +43,9 @@ class _DbSwitcherPageState extends State<DbSwitcherPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ScopedModel<DbSwitchState>(
-        model: dbSwitcher.state,
+    return StreamProvider<ActiveDatabase>.value(
+        initialData: dbSwitcher.activeDatabase,
+        value: dbSwitcher.changefeed,
         child: Stack(
           children: <Widget>[
             CrudView(
@@ -112,18 +113,15 @@ class _TrailingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScopedModelDescendant<DbSwitchState>(
-        builder: (context, child, model) {
-      return IconButton(
-        icon: model.activeDb.id == id
-            ? const Icon(Icons.star, color: Colors.yellow)
-            : const Icon(Icons.settings_backup_restore),
-        onPressed: () =>
-            dbSwitcher.switchDb(id: id, slug: "${item["slug"]}").then((_) {
-          dbSwitcher.logger.infoFlash("Switched to ${item["name"]}");
-        }),
-      );
-    });
+    return IconButton(
+      icon: Provider.of<ActiveDatabase>(context).id == id
+          ? const Icon(Icons.star, color: Colors.yellow)
+          : const Icon(Icons.settings_backup_restore),
+      onPressed: () =>
+          dbSwitcher.switchDb(id: id, slug: "${item["slug"]}").then((_) {
+        dbSwitcher.logger.infoFlash("Switched to ${item["name"]}");
+      }),
+    );
   }
 }
 
