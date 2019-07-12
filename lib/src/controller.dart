@@ -31,6 +31,7 @@ class DbSwitcher {
       this.logger,
       this.afterExportCallback,
       this.afterImportCallback,
+      this.enableImportExport = true,
       this.verbose = false})
       : assert(schema != null),
         assert(schema.isNotEmpty),
@@ -55,6 +56,9 @@ class DbSwitcher {
 
   /// After import callback
   final AfterImportCallback afterImportCallback;
+
+  /// Enable database import / export
+  final bool enableImportExport;
 
   /// The error loggerger
   ErrRouter logger;

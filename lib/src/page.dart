@@ -57,14 +57,15 @@ class _DbSwitcherPageState extends State<DbSwitcherPage> {
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          IconButton(
-                              icon: const Icon(Icons.file_upload),
-                              onPressed: () => confirmExportDb(
-                                  context: context,
-                                  id: id,
-                                  name: "${item["name"]}",
-                                  dbSwitcher: dbSwitcher,
-                                  destinationPath: storagePath)),
+                          if (dbSwitcher.enableImportExport == true)
+                            IconButton(
+                                icon: const Icon(Icons.file_upload),
+                                onPressed: () => confirmExportDb(
+                                    context: context,
+                                    id: id,
+                                    name: "${item["name"]}",
+                                    dbSwitcher: dbSwitcher,
+                                    destinationPath: storagePath)),
                           _TrailingButton(
                               dbSwitcher: dbSwitcher, id: id, item: item)
                         ],
@@ -80,17 +81,18 @@ class _DbSwitcherPageState extends State<DbSwitcherPage> {
                   child: const Icon(Icons.add, color: Colors.yellow),
                   onPressed: () => addProjectDialog(context, dbSwitcher),
                 )),
-            Positioned(
-                right: 15.0,
-                bottom: 85.0,
-                child: FloatingActionButton(
-                    heroTag: "importProject",
-                    child:
-                        const Icon(Icons.file_download, color: Colors.blueGrey),
-                    onPressed: () => importProjectDialog(
-                        context: context,
-                        dbSwitcher: dbSwitcher,
-                        sourcePath: "$storagePath"))),
+            if (dbSwitcher.enableImportExport == true)
+              Positioned(
+                  right: 15.0,
+                  bottom: 85.0,
+                  child: FloatingActionButton(
+                      heroTag: "importProject",
+                      child: const Icon(Icons.file_download,
+                          color: Colors.blueGrey),
+                      onPressed: () => importProjectDialog(
+                          context: context,
+                          dbSwitcher: dbSwitcher,
+                          sourcePath: "$storagePath"))),
           ],
         ));
   }
@@ -110,15 +112,18 @@ class _TrailingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: dbSwitcher.activeDb.id == id
-          ? const Icon(Icons.star, color: Colors.yellow)
-          : const Icon(Icons.settings_backup_restore),
-      onPressed: () =>
-          dbSwitcher.switchDb(id: id, slug: "${item["slug"]}").then((_) {
-            dbSwitcher.logger.infoFlash("Switched to ${item["name"]}");
-          }),
-    );
+    return ScopedModelDescendant<DbSwitchState>(
+        builder: (context, child, model) {
+      return IconButton(
+        icon: model.activeDb.id == id
+            ? const Icon(Icons.star, color: Colors.yellow)
+            : const Icon(Icons.settings_backup_restore),
+        onPressed: () =>
+            dbSwitcher.switchDb(id: id, slug: "${item["slug"]}").then((_) {
+          dbSwitcher.logger.infoFlash("Switched to ${item["name"]}");
+        }),
+      );
+    });
   }
 }
 
